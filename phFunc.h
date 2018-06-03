@@ -7,19 +7,13 @@ Double_t DiffProb(Double_t *x,Double_t *par);
 Double_t SingleAPProb(Double_t *x,Double_t *par);
 
 Double_t GeneralizedPoisson(Double_t *x, Double_t *par){
-	// std::cout<<"ok : gene"<<std::endl;
 	Double_t k      = x[0];
 	Double_t mu     = par[0];
 	Double_t lambda = par[1];
-	// std::cout<<"ok : gene"<<std::endl;
 	Double_t dom=mu*TMath::Power(mu+k*lambda,k-1);
 	Double_t num=(Double_t)TMath::Factorial((Int_t)k);
 	Double_t coeff=TMath::Exp(-mu-k*lambda);
 	Double_t rtnval=dom*coeff/num;
-	// std::cout<<"dom: "<<dom<<std::endl;
-	// std::cout<<"num: "<<num<<std::endl;
-	// std::cout<<"coeff: "<<coeff<<std::endl;
-	// std::cout<<"rtnval: "<<rtnval<<std::endl;
 	return rtnval;
 }
 
@@ -47,11 +41,6 @@ Double_t GaussPH(Double_t *x,Double_t *par){
 
 	Double_t coeff= 1./TMath::Sqrt(2*TMath::Pi())/sigma;
 	Double_t expo = TMath::Exp(-TMath::Power((PH-(ped+k*gain)),2)/(2.*sigma*sigma));
-	// std::cout<<" expo: "<<expo<<std::endl;
-	// std::cout<<"nakami bunsi: "<<PH<<std::endl;
-	// std::cout<<"nakami bunsi: "<<ped<<std::endl;
-	// std::cout<<"nakami bunsi: "<<k*gain<<std::endl;
-	// std::cout<<"nakami bunbo: "<<(2.*sigma*sigma)<<std::endl;
 	return coeff*expo;
 }
 

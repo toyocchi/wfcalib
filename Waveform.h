@@ -110,12 +110,15 @@ Double_t Waveform::GetTimeAt(Int_t ibin){
 // }
 
 void Waveform::Differentiate(Int_t ndiff){
-   Double_t* tempWF= new Double_t[fNPoints];
-   Double_t* diffWF= new Double_t[fNPoints];
-   Double_t* tempNWF= new Double_t[fNPoints];
-   Double_t* diffNWF= new Double_t[fNPoints];
-   memcpy(tempWF,fAmplitude,fNPoints*sizeof(Double_t) );
-   memcpy(tempNWF,fNoiseAmp,fNPoints*sizeof(Double_t) );
+
+   if (ndiff>0) {
+      Double_t* tempWF= new Double_t[fNPoints];
+      Double_t* diffWF= new Double_t[fNPoints];
+      Double_t* tempNWF= new Double_t[fNPoints];
+      Double_t* diffNWF= new Double_t[fNPoints];
+      memcpy(tempWF,fAmplitude,fNPoints*sizeof(Double_t) );
+      memcpy(tempNWF,fNoiseAmp,fNPoints*sizeof(Double_t) );
+
    for(int idiff=0;idiff<ndiff;idiff++){
 
       for (int iBin = 1; iBin < fNPoints-1; iBin++) {
@@ -131,6 +134,8 @@ void Waveform::Differentiate(Int_t ndiff){
    }
    memcpy(fAmplitude,tempWF,fNPoints*sizeof(Double_t) );
    memcpy(fNoiseAmp,tempNWF,fNPoints*sizeof(Double_t) );
+   }
+
    // for (int iBin = 0; iBin < fNPoints; iBin++) {
    //    fAmplitude[iBin]=diffWF[iBin];
    // }

@@ -13,7 +13,7 @@ Double_t fitfunc(Double_t *x, Double_t *par);
 TGraph* grQNQWF=new TGraph();
 Double_t grQNQange[2] = {-100, 1000};
 
-Double_t Gain=5;
+Double_t Gain=1;
 Int_t gNNoise=1;
    Int_t Nrep=5;
 std::vector<Double_t>noiselist={0,0.05,0.1};
@@ -47,7 +47,7 @@ void StatGainCalib(void) {
    Double_t sum;
    // Double_t noise;
 
-   Int_t npheRange[2] = {1,4000};
+   Int_t npheRange[2] = {1,100};
    Int_t npheStep = 100;
 
    Double_t logstep = (TMath::Log(npheRange[1]) - TMath::Log(npheRange[0]))/ (npheStep -1);
@@ -68,7 +68,7 @@ void StatGainCalib(void) {
    }
 
 
-   for (int istep = 1; istep < npheStep; istep++) {
+   for (int istep = 0; istep < npheStep; istep++) {
       // int iphe = (int)TMath::Exp(TMath::Log(npheRange[0]) + logstep * istep);
       int iphe = istep*(npheRange[1]-npheRange[0])/npheStep;
       for(int irep=0;irep<Nrep;irep++){
@@ -79,14 +79,23 @@ void StatGainCalib(void) {
          for (int i = 0; i < noiselist.size(); i++) {
             Waveform* wf= new Waveform(gNbin,-100,1000);
             wf->MakeEvent(iphe);
-            if (i==0) {
-            vecSum.push_back(wf->GetCharge());
-            // std::cout<<"iphe: "<<iphe<<" charge : "<<wf->GetCharge()<<std::endl;
-            }
+
+            // if (i==0) {
+            // vecSum.push_back();
+            // // std::cout<<"iphe: "<<iphe<<" charge : "<<wf->GetCharge()<<std::endl;
+            // }
+
             wf->SetNoiseLevel(noiselist[i]);
+            Double_t charge=wf->GetCharge();
             wf->Differentiate(2);
-            noisevar.push_back(wf->GetTotalVariance());
-            inter.push_back(wf->GetInterference());
+            Double_t noisevar=wf->GetTotalVariance();
+            // std::cout<<"variance: "<<noisevar<<std::endl;
+            // noisevar.push_back(wf->GetTotalVariance());
+            // inter.push_back(wf->GetInterference());
+            Int_t index=istep*Nrep+irep;
+            ((TGraphErrors*)(*cagrQNvar)[i])->SetPoint(     index,charge,noisevar);
+            ((TGraphErrors*)(*cagrQNvar)[i])->SetPointError(index,0     ,noisevar*0.2);
+            delete wf;
          }
          vecNoise.push_back(noisevar);
          vecInterference.push_back(inter);
@@ -94,36 +103,26 @@ void StatGainCalib(void) {
    }
 
 
-   for(int i=0;i<vecSum.size();i++){
-      // for(int iNoise=0;iNoise<gNNoise;iNoise++){
-      for (int j = 0; j < noiselist.size(); j++) {
-         ((TGraphErrors*)(*cagrQNvar)[j])->SetPoint(i,vecSum[i],vecNoise[i][j]);
-                 ((TGraphErrors*)(*cagrQNvar)[j])->SetPointError(i,0,vecSum[i]*0.01);
-         // ((TGraph*)(*cagrInt)[j])->SetPoint(i,vecSum[i],vecInterference[i][j]);
-         // grQNQDiff[iNoise]->SetPoint(i,vecSum[i],vecDiff[iNoise][i]);
-         // }
-      }
-   }
+   // for(int i=0;i<vecSum.size();i++){
+   //    // for(int iNoise=0;iNoise<gNNoise;iNoise++){
+   //    for (int j = 0; j < noiselist.size(); j++) {
+   //       ((TGraphErrors*)(*cagrQNvar)[j])->SetPoint(i,vecSum[i],vecNoise[i][j]);
+   //               ((TGraphErrors*)(*cagrQNvar)[j])->SetPointError(i,0,vecNoise[i][j]*0.2);
+   //       // ((TGraph*)(*cagrInt)[j])->SetPoint(i,vecSum[i],vecInterference[i][j]);
+   //       // grQNQDiff[iNoise]->SetPoint(i,vecSum[i],vecDiff[iNoise][i]);
+   //       // }
+   //    }
+   // }
 
    TString fname="gain1_noise5e-2.pdf";
 
    TF1* func= new TF1("fitfunc",fitfunc,-10,5000,3);
 
    cgr0->cd();
-   std::vector<Double_t> noff;
-   std::vector<Double_t> scale;
+   // std::vector<Double_t> noff;
+   // std::vector<Double_t> scale;
    for (int i = 0; i < noiselist.size(); i++) {
-      // ((TGraph*)(*cagrQNvar)[i])->Fit("fitfunc","","");
-      ((TGraphErrors*)(*cagrQNvar)[i])->SetTitle("Q_{dint}vs Q^{2}_{drms};Q_{dint};Q^{2}_{drms}");
-      // ((TGraph*)(*cagrQNvar)[i])->SetMaximum(2000);
-      ((TGraphErrors*)(*cagrQNvar)[i])->SetMinimum(0);
-      ((TGraphErrors*)(*cagrQNvar)[i])->SetMarkerStyle(20);
-      ((TGraphErrors*)(*cagrQNvar)[i])->SetMarkerColor(2+i);
-      if (i==0) {
-         ((TGraphErrors*)(*cagrQNvar)[i])->Draw("ap");
-      }else{
-         ((TGraphErrors*)(*cagrQNvar)[i])->Draw("p same");
-      }
+
       // ((TGraph*)(*cagrInt)[i])->SetMaximum(1000);
       // ((TGraph*)(*cagrInt)[i])->SetMinimum(0);
       // ((TGraph*)(*cagrInt)[i])->SetMarkerStyle(20);
@@ -143,8 +142,8 @@ void StatGainCalib(void) {
       }
       // return pol1->GetParameter(0);
       // YCut(((TGraph*)(*cagrQNvar)[i]),par);
-      noff.push_back(par[0]);
-      scale.push_back(par[1]);
+      // noff.push_back(par[0]);
+      // scale.push_back(par[1]);
       // std::cout<<"Ycut: "<<par[0]<<std::endl;
       // std::cout<<"scale: "<<par[1]<<std::endl;
       // Double_t coeff=par[2];
@@ -161,50 +160,61 @@ void StatGainCalib(void) {
       std::cout<<"Gain: "<<MesGain<<"+-"<<MesGainerr<<std::endl;
 
       std::cout<<"Pmul: "<<pmul<<"+-"<<pmulerr<<std::endl;
-   }
-
-   Double_t pm=func->GetParameter(2);
-
-   for(int i=0;i<vecSum.size();i++){
-      for (int j = 0; j < noiselist.size(); j++) {
-         // std::cout<<"point set"<<std::endl;
-         if(vecSum[i]>0){
-            // ((TH2D*)(*cahQNQ)[j])->Fill(vecSum[i],(vecNoise[i][j]-noff[j])/vecSum[i]);
-            ((TGraph*)(*cagrQNQ)[j])->SetPoint(((TGraph*)(*cagrQNQ)[j])->GetN(),vecSum[i],(vecNoise[i][j]-noff[j])/vecSum[i]);
-         }
-      }
-   }
-
-   cgr1->cd();
-   cgr1->Divide(2,2);
-   for (int i = 0; i < noiselist.size(); i++) {
-
-      // cgr1->cd(i+1);
-      // ((TH2D*)(*cahQNQ)[i])->Draw("colz");
-      // ((TH2D*)(*cahQNQ)[i])->FitSlicesY();
-      //
-      // TH1D* hFSQNQ=(TH1D*)gDirectory->Get(Form("hQNQ%d_1",i));
-      // hFSQNQ->SetMarkerStyle(20);
-      // hFSQNQ->SetMarkerColor(2);
-      // hFSQNQ->Draw("same p");
-      // hFSQNQ->Fit("fpol1");
-      ((TGraph*)(*cagrQNQ)[i])->SetTitle("Q_{dint} vs Q^{2}_{drms}/Q_{dint};Q_{dint};Q^{2}_{drms}/Q_{dint}");
-      ((TGraph*)(*cagrQNQ)[i])->SetMaximum(5);
-      ((TGraph*)(*cagrQNQ)[i])->SetMinimum(0);
-      ((TGraph*)(*cagrQNQ)[i])->SetMarkerStyle(20);
-      ((TGraph*)(*cagrQNQ)[i])->SetMarkerColor(2+i);
-      // ((TGraph*)(*cagrQNQ)[i])->Draw("ap");
-      ((TGraph*)(*cagrQNQ)[i])->Fit(Form("fpol1%d",i),"Q","",0,10000);
+      // ((TGraph*)(*cagrQNvar)[i])->Fit("fitfunc","","");
+      ((TGraphErrors*)(*cagrQNvar)[i])->SetTitle("Q_{dint}vs Q^{2}_{drms};Q_{dint};Q^{2}_{drms}");
+      ((TGraph*)(*cagrQNvar)[i])->SetMaximum(100);
+      ((TGraphErrors*)(*cagrQNvar)[i])->SetMinimum(0);
+      ((TGraphErrors*)(*cagrQNvar)[i])->SetMarkerStyle(20);
+      ((TGraphErrors*)(*cagrQNvar)[i])->SetMarkerColor(2+i);
       if (i==0) {
-         ((TGraph*)(*cagrQNQ)[i])->Draw("ap");
+         ((TGraphErrors*)(*cagrQNvar)[i])->Draw("ap");
       }else{
-         ((TGraph*)(*cagrQNQ)[i])->Draw("p same");
+         ((TGraphErrors*)(*cagrQNvar)[i])->Draw("p same");
       }
-      // fpol1->SetLineColor()
-
-      // fpol1->Draw("same");
-
    }
+
+   // Double_t pm=func->GetParameter(2);
+   //
+   // for(int i=0;i<vecSum.size();i++){
+   //    for (int j = 0; j < noiselist.size(); j++) {
+   //       // std::cout<<"point set"<<std::endl;
+   //       if(vecSum[i]>0){
+   //          // ((TH2D*)(*cahQNQ)[j])->Fill(vecSum[i],(vecNoise[i][j]-noff[j])/vecSum[i]);
+   //          ((TGraph*)(*cagrQNQ)[j])->SetPoint(((TGraph*)(*cagrQNQ)[j])->GetN(),vecSum[i],(vecNoise[i][j]-noff[j])/vecSum[i]);
+   //       }
+   //    }
+   // }
+   //
+   // cgr1->cd();
+   // cgr1->Divide(2,2);
+   // for (int i = 0; i < noiselist.size(); i++) {
+   //
+   //    // cgr1->cd(i+1);
+   //    // ((TH2D*)(*cahQNQ)[i])->Draw("colz");
+   //    // ((TH2D*)(*cahQNQ)[i])->FitSlicesY();
+   //    //
+   //    // TH1D* hFSQNQ=(TH1D*)gDirectory->Get(Form("hQNQ%d_1",i));
+   //    // hFSQNQ->SetMarkerStyle(20);
+   //    // hFSQNQ->SetMarkerColor(2);
+   //    // hFSQNQ->Draw("same p");
+   //    // hFSQNQ->Fit("fpol1");
+   //    ((TGraph*)(*cagrQNQ)[i])->SetTitle("Q_{dint} vs Q^{2}_{drms}/Q_{dint};Q_{dint};Q^{2}_{drms}/Q_{dint}");
+   //    ((TGraph*)(*cagrQNQ)[i])->SetMaximum(5);
+   //    ((TGraph*)(*cagrQNQ)[i])->SetMinimum(0);
+   //    ((TGraph*)(*cagrQNQ)[i])->SetMarkerStyle(20);
+   //    ((TGraph*)(*cagrQNQ)[i])->SetMarkerColor(2+i);
+   //    // ((TGraph*)(*cagrQNQ)[i])->Draw("ap");
+   //    ((TGraph*)(*cagrQNQ)[i])->Fit(Form("fpol1%d",i),"Q","",0,10000);
+   //    if (i==0) {
+   //       ((TGraph*)(*cagrQNQ)[i])->Draw("ap");
+   //    }else{
+   //       ((TGraph*)(*cagrQNQ)[i])->Draw("p same");
+   //    }
+   //    // fpol1->SetLineColor()
+   //
+   //    // fpol1->Draw("same");
+   //
+   // }
 
 }
 

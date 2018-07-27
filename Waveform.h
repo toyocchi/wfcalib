@@ -27,7 +27,7 @@ Double_t funcsingle(Double_t *x, Double_t *par) {
 }
 
 Double_t APtiming(Double_t *x, Double_t *par) {
-   //par 0: decay time const
+   //par 0: time const for AP timing distribution (assuming exponential dist)
    if (x[0] < 0) return 0;
    else return TMath::Exp(-x[0]/par[0]);
 }

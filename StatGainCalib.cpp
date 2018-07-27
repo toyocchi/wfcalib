@@ -31,6 +31,7 @@ void Init(void) {
    gFSingle->SetParameter(0,20);
    gFSingle->SetParameter(1,0);
    gFSingle->FixParameter(2,Gain);
+   gAPtime->FixParameter(0,100);
    lambda = 0.3;
    alpha = 0.15;
    // for (int iBin = 0; iBin < gNbin; iBin++) WFT[iBin] = (grQNQange[1] - grQNQange[0]) /gNbin * iBin + grQNQange[0];

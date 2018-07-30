@@ -15,7 +15,7 @@ Double_t grQNQange[2] = {-100, 1000};
 
 Double_t Gain=1;
 Int_t gNNoise=1;
-   Int_t Nrep=5;
+Int_t Nrep=5;
 std::vector<Double_t>noiselist={0,0.05,0.1};
 // Double_t noiselevel=0;
 // Double_t WFRaw[gNbin] = {};
@@ -47,7 +47,7 @@ void StatGainCalib(void) {
    Double_t sum;
    // Double_t noise;
 
-   Int_t npheRange[2] = {1,100};
+   Int_t npheRange[2] = {1,3000};
    Int_t npheStep = 100;
 
    Double_t logstep = (TMath::Log(npheRange[1]) - TMath::Log(npheRange[0]))/ (npheStep -1);
@@ -74,7 +74,7 @@ void StatGainCalib(void) {
       for(int irep=0;irep<Nrep;irep++){
          std::vector<Double_t> noisevar;
          std::vector<Double_t> inter;
-         // cout<<istep<<" "<<iphe<<" sum : "<<sum<<endl;
+         cout<<istep<<" "<<iphe<<endl;
 
          for (int i = 0; i < noiselist.size(); i++) {
             Waveform* wf= new Waveform(gNbin,-100,1000);
@@ -245,11 +245,11 @@ void YCut(TGraph* gr,Double_t *par){
 }
 
 Double_t DivisionError(Double_t &value1, Double_t &value1err,const Double_t &value2, Double_t &value2err){
-	/*calculate error of value 1/ value 2*/
-	return TMath::Sqrt(TMath::Power(value1err/value2,2)+TMath::Power(value1*value2err/(value2*value2),2));
+   /*calculate error of value 1/ value 2*/
+   return TMath::Sqrt(TMath::Power(value1err/value2,2)+TMath::Power(value1*value2err/(value2*value2),2));
 }
 
 Double_t MultipleError(Double_t &value1, Double_t &value1err, Double_t &value2, Double_t &value2err){
-	/*calculate error of value 1* value 2*/
-	return TMath::Sqrt(TMath::Power(value1err* value2,2)+TMath::Power(value1*value2err,2));
+   /*calculate error of value 1* value 2*/
+   return TMath::Sqrt(TMath::Power(value1err* value2,2)+TMath::Power(value1*value2err,2));
 }

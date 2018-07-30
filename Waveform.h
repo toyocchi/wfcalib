@@ -1,17 +1,20 @@
 Double_t timemin = -100;
 Double_t timemax = 1000;
+Double_t lambda,alpha;
 Double_t funcsctime(Double_t *x, Double_t *par);
 Double_t funcsingle(Double_t *x, Double_t *par);
+Double_t APtiming(Double_t *x, Double_t *par);
+Double_t Borel(Double_t,Int_t); // caluculate the P(n) of borel distribution
+Int_t Borel_gen(Double_t); // generate the random variable obeying Borel
 TF1 *gFSingle = new TF1("fsingle", funcsingle, timemin, timemax, 3);
 TF1 *gFSctime = new TF1("fsctime", funcsctime, timemin, timemax, 1);
+TF1 *gAPtime = new TF1("APtime", APtiming, 0, timemax, 1);
 const Int_t gNbin = 1100;
 Double_t funcsctime(Double_t *x, Double_t *par) {
    //par 0: decay time const
    if (x[0] < 0) return 0;
    else return TMath::Exp(-x[0]/par[0]);
 }
-
-
 
 Double_t funcsingle(Double_t *x, Double_t *par) {
    //par 0: decay time const
@@ -22,6 +25,33 @@ Double_t funcsingle(Double_t *x, Double_t *par) {
    else if (x[0] > par[1] + par[0] * 4) return 0;
    else return par[2]*TMath::Exp(-(x[0] - par[1])/par[0]) / (par[0]*(1-TMath::Exp(-4)));
 }
+
+Double_t APtiming(Double_t *x, Double_t *par) {
+   //par 0: time const for AP timing distribution (assuming exponential dist)
+   if (x[0] < 0) return 0;
+   else return TMath::Exp(-x[0]/par[0]);
+}
+
+Double_t Borel(Double_t lambda, Int_t n){
+   Double_t exp = TMath::Exp(-lambda*n);
+   Double_t power = 1.;
+   for (Int_t i=1;i<n;++i){
+     power *= lambda*n;
+   }
+   Double_t numerator = TMath::Factorial(n);
+   return exp*power/numerator;
+}
+
+Int_t Borel_gen(Double_t lambda){
+  Int_t return_rn = 0;
+  Double_t rand_uni = gRandom->Uniform();
+  while(rand_uni > 0){
+    return_rn++;
+    rand_uni -= Borel(lambda,return_rn);
+  }
+  return return_rn;
+}
+  
 
 class Waveform{
 protected:
@@ -156,21 +186,35 @@ void Waveform::SetAmplitude(Double_t* amplitude)
    memcpy(fAmplitude, amplitude, sizeof(Double_t)*fNPoints);
 }
 
-void Waveform::MakeEvent(Int_t npe){
+void Waveform::MakeEvent(Int_t npe){ // define npe as initial number of photon
    gRandom->SetSeed(0);
    for (size_t inpe = 0; inpe < npe; inpe++) {
       Double_t pulsetime = gFSctime->GetRandom();
+      Int_t CT_num = Borel_gen(lambda);
       // Double_t pulsetime=gRandom->Uniform(0,30);
       gFSingle->SetParameter(1, pulsetime);
 
       for (int iBin = 0; iBin < gNbin; iBin++) {
          // for (std::vector<Double_t >::iterator it= noiselist.begin();it!=noiselist.end();it++) {
          // Int_t dis=std::distance(noiselist.begin(),it);
-         fAmplitude[iBin]+= gFSingle->Eval(fTime[iBin]);
+         fAmplitude[iBin]+= CT_num*gFSingle->Eval(fTime[iBin]);
          // }
       }
-   }
-
+      // complete pulse generation with cross talk: After Pulse below
+      for (Int_t ap_cand=0; ap_cand<CT_num; ap_cand++){
+         Double_t uniform_rn = gRandom->Uniform();
+         if (uniform_rn > alpha){
+            // editing here
+            Double_t APtime = gAPtime->GetRandom();
+            Double_t decayconst = gFSingle->GetParameter(0);
+            Double_t AP_amp = 1.-TMath::Exp(-APtime/decayconst);
+            gFSingle->SetParameter(1,pulsetime+APtime);
+            for(int iBin=0; iBin < gNbin; iBin++){
+               fAmplitude[iBin]+= AP_amp*gFSingle->Eval(fTime[iBin]);
+            }
+         }
+      }
+   } // end of loop considering npe
 }
 
 Double_t Waveform::GetCharge(){
@@ -214,3 +258,5 @@ Double_t Waveform::GetNoiseConst(){
    }
    return noiseconst;
 }
+
+

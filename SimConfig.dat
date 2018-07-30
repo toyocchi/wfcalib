@@ -1,0 +1,14 @@
+ScintDecay:45
+SinglePulseWidth:20
+AfterPulseTimeConstant:100
+Lambda:0.3
+Alpha:0.15
+Gain:1
+RangeMin:1
+RangeMax:1000
+Nstep:200
+Ndiff:2
+Nevent:2
+NoiseLevel:0
+NoiseLevel:0.05
+NoiseLevel:0.1

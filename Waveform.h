@@ -1,6 +1,30 @@
 Double_t timemin = -100;
 Double_t timemax = 1000;
-Double_t lambda,alpha;
+Double_t lambda;
+string   strLambda="Lambda";
+Double_t alpha;
+string   strAlpha="Alpha";
+Double_t ScintDecay;
+string   strScintDecay="ScintDecay";
+Double_t SPwidth;
+string   strSPwidth="SinglePulseWidth";
+Double_t APtimeconstant;
+string   strAPtimeconstant="AfterPulseTimeConstant";
+Double_t Gain=1;
+string   strGain="Gain";
+Int_t RangeMin;
+string   strRangeMin="RangeMin";
+Int_t RangeMax;
+string   strRangeMax="RangeMax";
+Int_t    Nstep;
+string   strNstep="Nstep";
+Int_t    Ndiff;
+string   strNdiff="Ndiff";
+Int_t    Nevent;
+string   strNevent  ="Nevent";
+// Int_t    Nevent;
+std::vector<Double_t> noiselist;
+string   strNoiseLevel  ="NoiseLevel";
 Double_t funcsctime(Double_t *x, Double_t *par);
 Double_t funcsingle(Double_t *x, Double_t *par);
 Double_t APtiming(Double_t *x, Double_t *par);
@@ -51,7 +75,7 @@ Int_t Borel_gen(Double_t lambda){
   }
   return return_rn;
 }
-  
+
 
 class Waveform{
 protected:

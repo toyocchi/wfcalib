@@ -1,4 +1,6 @@
 #include "Waveform.h"
+#include "TXMLEngine.h"
+// #include <boost/property_tree/ptree.hpp>
 
 void Init(void);
 void Event(Int_t nPhe, Waveform* wf);
@@ -17,9 +19,109 @@ Double_t grQNQange[2] = {-100, 1000};
 Int_t Nrep=5;
 
 Double_t WFT[gNbin]    = {};
+void DisplayNode(TXMLEngine* xml, XMLNodePointer_t node, Int_t level);
+void InitConfig(std::string &linestr,std::string &strvalue);
+void ParseConfig(TXMLEngine* xml, XMLNodePointer_t node);
+// TFile* fResult=new TFile("Result.root","recreate");
+
+void DisplayNode(TXMLEngine* xml, XMLNodePointer_t node, Int_t level)
+{
+   // this function display all accessible information about xml node and its children
+   printf("%*c node: %s\n",level,' ', xml->GetNodeName(node));
+   // display namespace
+   XMLNsPointer_t ns = xml->GetNS(node);
+   if (ns!=0)
+   printf("%*c namespace: %s refer: %s\n",level+2,' ', xml->GetNSName(ns), xml->GetNSReference(ns));
+   // display attributes
+   XMLAttrPointer_t attr = xml->GetFirstAttr(node);
+   while (attr!=0) {
+      printf("%*c attr: %s value: %s\n",level+2,' ', xml->GetAttrName(attr), xml->GetAttrValue(attr));
+      attr = xml->GetNextAttr(attr);
+   }
+   // display content (if exists)
+   const char* content = xml->GetNodeContent(node);
+   if (content!=0)
+   printf("%*c cont: %s\n",level+2,' ', content);
+   // display all child nodes
+   XMLNodePointer_t child = xml->GetChild(node);
+   while (child!=0) {
+      DisplayNode(xml, child, level+2);
+      child = xml->GetNext(child);
+   }
+}
+
+void ParseConfig(TXMLEngine* xml, XMLNodePointer_t node){
+   // this function display all accessible information about xml node and its children
+   std::string NodeName = xml->GetNodeName(node);
+   std::string ConfigName;
+   std::string ConfigValue;
+   if (NodeName=="config") {
+      XMLNodePointer_t childNode = xml->GetChild(node);
+      // std::cout<<"n: "<<NodeName<<std::endl;
+      while (childNode!=0) {
+         std::string ChildNodeName = xml->GetNodeName(childNode);
+         // std::cout<<"cn: "<<ChildNodeName<<std::endl;
+         if (ChildNodeName=="name") {
+            ConfigName = xml->GetNodeContent(childNode);
+
+         }else if(ChildNodeName=="values"){
+            XMLNodePointer_t valueNode = xml->GetChild(childNode);
+            while (valueNode!=0) {
+               ConfigValue = xml->GetNodeContent(valueNode);
+               valueNode = xml->GetNext(valueNode);
+               // std::cout<<"ConfigName: "<<ConfigName<<std::endl;
+               // std::cout<<"ConfigValue: "<<ConfigValue<<std::endl;
+               InitConfig(ConfigName,ConfigValue);
+            }
+
+         }
+
+         childNode = xml->GetNext(childNode);
+      }
+
+
+   }
+
+   XMLNodePointer_t child = xml->GetChild(node);
+   while (child!=0) {
+      ParseConfig(xml, child);
+      child = xml->GetNext(child);
+   }
+}
+
+void InitConfig(std::string &linestr,std::string &strvalue){
+   if (linestr.find(strLambda)        !=string::npos)         lambda = std::stod(strvalue);
+   if (linestr.find(strAlpha)         !=string::npos)          alpha = std::stod(strvalue);
+   if (linestr.find(strScintDecay)    !=string::npos)     ScintDecay = std::stod(strvalue);
+   if (linestr.find(strSPwidth)       !=string::npos)        SPwidth = std::stod(strvalue);
+   if (linestr.find(strAPtimeconstant)!=string::npos) APtimeconstant = std::stod(strvalue);
+   if (linestr.find(strGain)          !=string::npos)           Gain = std::stod(strvalue);
+   if (linestr.find(strRangeMin)      !=string::npos)       RangeMin = std::stoi(strvalue);
+   if (linestr.find(strRangeMax)      !=string::npos)       RangeMax = std::stoi(strvalue);
+   if (linestr.find(strNstep)         !=string::npos)          Nstep = std::stoi(strvalue);
+   if (linestr.find(strNdiff)         !=string::npos)          Ndiff = std::stoi(strvalue);
+   if (linestr.find(strNevent)        !=string::npos)         Nevent = std::stoi(strvalue);
+   if (linestr.find(strNoiseLevel)    !=string::npos)     noiselist.push_back(std::stod(strvalue));
+}
 
 void Init(void) {
-   LoadSimConfig();
+   TXMLEngine* xml = new TXMLEngine;
+
+   XMLDocPointer_t xmldoc = xml->ParseFile("./data.xml");
+   if (xmldoc==0) {
+      delete xml;
+      return;
+   }
+   XMLNodePointer_t mainnode = xml->DocGetRootElement(xmldoc);
+   // display recursively all nodes and subnodes
+   // DisplayNode(xml, mainnode, 1);
+   ParseConfig(xml, mainnode);
+   // Release memory before exit
+   xml->FreeDoc(xmldoc);
+   delete xml;
+
+   // LoadSimConfig();
+   std::cout<<"ScintDecay: "<<ScintDecay<<std::endl;
    gFSctime->SetParameter(0,ScintDecay);
    gFSingle->SetParameter(0,SPwidth);
    gFSingle->SetParameter(1,0);

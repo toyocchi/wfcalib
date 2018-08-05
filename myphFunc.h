@@ -6,7 +6,8 @@ Double_t GP(Int_t k, Double_t mu, Double_t lambda) {
 Int_t Combination(Int_t n, Int_t r) {
 	Int_t num = 1;
 	for(Int_t i = 1; i <= r; i++) {
-		num *= (n - i + 1) / i;
+		num = num * (n - i + 1) / i;
+		//if *= is used, (Double_t) is necessary
 	}
 	return num;
 }

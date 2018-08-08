@@ -1,4 +1,7 @@
 //--/----|----/----|----/----|----/----|----/----|----/----|----/----|----/----|
+#ifndef WAVEFORM_LED_H
+#define WAVEFORM_LED_H
+
 class Waveform{
 private:
 	Double_t fSamplingRate = 1.6; // GHz
@@ -16,7 +19,6 @@ protected:
 	Double_t fTauAP = 100;
 	Bool_t fLED;
 
-	Double_t fTrueGain = .04485;
 	Double_t fLambda = .067;
 	Double_t fAlpha = .32;
 	Double_t fAlphaCT = 0;
@@ -36,7 +38,8 @@ protected:
 	void SetNoise(Double_t noise);
 
 public:
-	Waveform(Double_t integRange=150, Bool_t led=kTRUE);
+	Waveform(Double_t trueGain=.004485, Double_t integRange=150,
+				Bool_t led=kTRUE);
    ~Waveform();
 
    Int_t MakeEvent(Int_t nPhoton);
@@ -51,40 +54,4 @@ public:
    Double_t GetVariance();
 };
 
-
-inline void Waveform::SetNoise(Double_t noise) {
-	TRandom3 rndm(0);
-	for (int iPnt = 0; iPnt < fNPnt; iPnt++) {
-      fNoiseAmp[iPnt] = rndm.Gaus(0, noise);
-   }
-}
-
-inline void Waveform::SetTauTiming(Double_t tauTiming) {
-	fTauTiming = tauTiming;
-}
-
-inline void Waveform::SetNoises(Double_t lambda, Double_t alpha,
-										  Double_t alphaCT, Double_t dcr, 
-										  Double_t noise) {
-	fLambda = lambda;
-	fAlpha = alpha;
-	fAlphaCT = alphaCT;
-	fDCR = dcr;
-	fNoise = noise;
-}
-
-inline Double_t Waveform::GetCharge() {
-   Double_t charge = 0;
-   for (int iPnt = 0; iPnt < fNPnt; iPnt++) {
-      charge += (fSignalAmp[iPnt]+fNoiseAmp[iPnt])*fPntSize;
-   }
-   return charge;
-}
-
-inline Double_t Waveform::GetVariance() {
-   Double_t variance=0;
-   for (int iPnt = 0; iPnt < fNPnt; iPnt++) {
-      variance += TMath::Power((fSignalAmp[iPnt]+fNoiseAmp[iPnt]),2) * fPntSize;
-   }
-   return variance;
-}
+#endif // WAVEFORM_LED_H

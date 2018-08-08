@@ -1,7 +1,7 @@
 //--/----|----/----|----/----|----/----|----/----|----/----|----/----|----/----|
 #include "Waveform_LED.h"
 
-Waveform::Waveform(Double_t integRange, Bool_t led) {
+Waveform::Waveform(Double_t trueGain, Double_t integRange, Bool_t led) {
    fNPnt = fSamplingRate * integRange;
    fAnalysisEnd = fAnalysisStart + integRange;
    fIntegRange = integRange;
@@ -13,7 +13,7 @@ Waveform::Waveform(Double_t integRange, Bool_t led) {
 
    fFuncSingle = new TF1("funcSingle", "[0]/[1]*exp(-x/[1])",
 								 fAnalysisStart, fAnalysisEnd);
-   fFuncSingle->SetParameters(fTrueGain, fTauDecay);
+   fFuncSingle->SetParameters(trueGain, fTauDecay);
    fFuncTiming = new TF1("funcTiming", "exp(-x/[0])", 0, 99999);
    fFuncTiming->SetParameters(0, fTauTiming);
    fFuncAPTiming = new TF1("funcAPTiming", "exp(-x/[0])", 0, 99999);
@@ -157,3 +157,40 @@ void Waveform::Differentiate(Int_t nDiff) {
    }
 }
 
+
+void Waveform::SetNoise(Double_t noise) {
+   TRandom3 rndm(0);
+   for (int iPnt = 0; iPnt < fNPnt; iPnt++) {
+      fNoiseAmp[iPnt] = rndm.Gaus(0, noise);
+   }
+}
+
+void Waveform::SetNoises(Double_t lambda, Double_t alpha,
+                                Double_t alphaCT, Double_t dcr,
+                                Double_t noise) {
+   fLambda = lambda;
+   fAlpha = alpha;
+   fAlphaCT = alphaCT;
+   fDCR = dcr;
+   fNoise = noise;
+}
+
+void Waveform::SetTauTiming(Double_t tauTiming) {
+   fTauTiming = tauTiming;
+}
+
+Double_t Waveform::GetCharge() {
+   Double_t charge = 0;
+   for (int iPnt = 0; iPnt < fNPnt; iPnt++) {
+      charge += (fSignalAmp[iPnt]+fNoiseAmp[iPnt])*fPntSize;
+   }
+   return charge;
+}
+
+Double_t Waveform::GetVariance() {
+   Double_t variance=0;
+   for (int iPnt = 0; iPnt < fNPnt; iPnt++) {
+      variance += TMath::Power((fSignalAmp[iPnt]+fNoiseAmp[iPnt]),2) * fPntSize;
+   }
+   return variance;
+}

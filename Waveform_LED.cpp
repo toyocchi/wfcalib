@@ -1,11 +1,26 @@
 //--/----|----/----|----/----|----/----|----/----|----/----|----/----|----/----|
 #include "Waveform_LED.h"
 
-Waveform::Waveform(Double_t trueGain, Double_t integRange, Bool_t led) {
-   fNPnt = fSamplingRate * integRange;
-   fAnalysisEnd = fAnalysisStart + integRange;
-   fIntegRange = integRange;
-   fLED = led;
+Waveform::Waveform() {
+}
+
+Waveform::~Waveform(){
+   delete[] fTime;
+   delete[] fSignalAmp;
+   delete[] fNoiseAmp;
+   delete fFuncSingle;
+}
+
+void Waveform::SetNoise(Double_t noise) {
+   TRandom3 rndm(0);
+   for (int iPnt = 0; iPnt < fNPnt; iPnt++) {
+      fNoiseAmp[iPnt] = rndm.Gaus(0, noise);
+   }
+}
+
+void Waveform::MakeTemplate() {
+   fNPnt = fSamplingRate * fIntegRange;
+   fAnalysisEnd = fAnalysisStart + fIntegRange;
 
    fTime = new Double_t[fNPnt];
    fSignalAmp = new Double_t[fNPnt];
@@ -13,7 +28,7 @@ Waveform::Waveform(Double_t trueGain, Double_t integRange, Bool_t led) {
 
    fFuncSingle = new TF1("funcSingle", "[0]/[1]*exp(-x/[1])",
 								 fAnalysisStart, fAnalysisEnd);
-   fFuncSingle->SetParameters(trueGain, fTauDecay);
+   fFuncSingle->SetParameters(fTrueGain, fTauDecay);
    fFuncTiming = new TF1("funcTiming", "exp(-x/[0])", 0, 99999);
    fFuncTiming->SetParameters(0, fTauTiming);
    fFuncAPTiming = new TF1("funcAPTiming", "exp(-x/[0])", 0, 99999);
@@ -25,77 +40,6 @@ Waveform::Waveform(Double_t trueGain, Double_t integRange, Bool_t led) {
    fPntSize = (fAnalysisEnd-fAnalysisStart)/fNPnt;
    for (int iPnt = 0; iPnt < fNPnt; iPnt++) {
       fTime[iPnt] = fAnalysisStart + fPntSize*iPnt;
-   }
-}
-
-
-Waveform::~Waveform(){
-   delete[] fTime;
-   delete[] fSignalAmp;
-   delete[] fNoiseAmp;
-   delete fFuncSingle;
-}
-
-
-void Waveform::Hit(Double_t pulseTime) {
-	TRandom3 rndm(0);
-
-   fHit++;
-   for(Int_t iPnt=0; iPnt<fNPnt; iPnt++) {
-      fSignalAmp[iPnt] += fFuncSingle->Eval(fTime[iPnt]-pulseTime);
-   }
-
-   // prompt crosstalk
-   if(fLambda>0) {
-      Int_t numCT = rndm.Poisson(fLambda);
-      for(Int_t iCT=0; iCT<numCT; iCT++) {
-         Hit(pulseTime);
-      }
-   }
-
-
-   // delayed cross talk                                                      
-   if(fAlphaCT>0) {
-      if(rndm.Uniform() < fAlphaCT) {
-         Double_t dCTTime = fFuncAPTiming->GetRandom();
-         Double_t dCTPulseTime = pulseTime + dCTTime;
-
-         if(pulseTime < fAnalysisEnd) {
-            for(Int_t iPnt=0; iPnt<fNPnt; iPnt++) {
-               fSignalAmp[iPnt] += fFuncSingle->Eval(fTime[iPnt]-dCTPulseTime);
-            }
-
-            // Crosstalk of delayed crosstalk      
-            if(fLambda>0) {
-               Int_t numCT = rndm.Poisson(fLambda);
-               for(Int_t iCT=0; iCT<numCT; iCT++) {
-                  Hit(dCTPulseTime);
-               }
-            }
-         }
-      }
-   }
-
-   // Afterpulsing
-   if(fAlpha>0) {
-      if(rndm.Uniform() < fAlpha) {
-         Double_t apTime= fFuncAPTiming->GetRandom();
-         Double_t apPulseTime = pulseTime + apTime;
-
-         if(pulseTime < fAnalysisEnd) {
-            for(Int_t iPnt=0; iPnt<fNPnt; iPnt++) {
-               fSignalAmp[iPnt] +=
-                  (1-exp(-apTime/fTauDecay)) *
-                  fFuncSingle->Eval(fTime[iPnt]-apPulseTime);
-            }
-
-            // Cross Talk of After Pulse
-            Int_t numCT = rndm.Poisson(fLambda);
-            for(Int_t iCT=0; iCT<numCT; iCT++) {
-               Hit(pulseTime);
-            }
-         }
-      }
    }
 }
 
@@ -134,6 +78,71 @@ Int_t Waveform::MakeEvent(Int_t nPhoton) {
 }
 
 
+void Waveform::Hit(Double_t pulseTime) {
+	TRandom3 rndm(0);
+
+   fHit++;
+   for(Int_t iPnt=0; iPnt<fNPnt; iPnt++) {
+		if(fTime[iPnt]<pulseTime) continue;
+      fSignalAmp[iPnt] += fFuncSingle->Eval(fTime[iPnt]-pulseTime);
+   }
+
+   // prompt crosstalk
+   if(fLambda>0) {
+      Int_t numCT = rndm.Poisson(fLambda);
+      for(Int_t iCT=0; iCT<numCT; iCT++) {
+         Hit(pulseTime);
+      }
+   }
+
+   // delayed cross talk                                                      
+   if(fAlphaCT>0) {
+      if(rndm.Uniform() < fAlphaCT) {
+         Double_t dCTTime = fFuncAPTiming->GetRandom();
+         Double_t dCTPulseTime = pulseTime + dCTTime;
+
+         if(pulseTime < fAnalysisEnd) {
+            for(Int_t iPnt=0; iPnt<fNPnt; iPnt++) {
+					if(fTime[iPnt]<dCTPulseTime) continue;
+               fSignalAmp[iPnt] += fFuncSingle->Eval(fTime[iPnt]-dCTPulseTime);
+            }
+
+            // Crosstalk of delayed crosstalk      
+            if(fLambda>0) {
+               Int_t numCT = rndm.Poisson(fLambda);
+               for(Int_t iCT=0; iCT<numCT; iCT++) {
+                  Hit(dCTPulseTime);
+               }
+            }
+         }
+      }
+   }
+
+   // Afterpulsing
+   if(fAlpha>0) {
+      if(rndm.Uniform() < fAlpha) {
+         Double_t apTime= fFuncAPTiming->GetRandom();
+         Double_t apPulseTime = pulseTime + apTime;
+
+         if(pulseTime < fAnalysisEnd) {
+            for(Int_t iPnt=0; iPnt<fNPnt; iPnt++) {
+					if(fTime[iPnt]<apPulseTime) continue;
+               fSignalAmp[iPnt] +=
+                  (1-exp(-apTime/fTauDecay)) *
+                  fFuncSingle->Eval(fTime[iPnt]-apPulseTime);
+            }
+
+            // Cross Talk of After Pulse
+            Int_t numCT = rndm.Poisson(fLambda);
+            for(Int_t iCT=0; iCT<numCT; iCT++) {
+               Hit(pulseTime);
+            }
+         }
+      }
+   }
+}
+
+
 void Waveform::Differentiate(Int_t nDiff) {
    if (nDiff>0) {
       Double_t* diffSignalAmp= new Double_t[fNPnt];
@@ -158,11 +167,34 @@ void Waveform::Differentiate(Int_t nDiff) {
 }
 
 
-void Waveform::SetNoise(Double_t noise) {
-   TRandom3 rndm(0);
-   for (int iPnt = 0; iPnt < fNPnt; iPnt++) {
-      fNoiseAmp[iPnt] = rndm.Gaus(0, noise);
-   }
+void Waveform::MakeGraph() {
+	fGraph = new TGraph;
+	for(Int_t iPnt=0; iPnt<fNPnt; iPnt++) {
+		fGraph->SetPoint(iPnt, fTime[iPnt], fSignalAmp[iPnt]+fNoiseAmp[iPnt]);
+	}
+	fGraph->SetMarkerStyle(8);
+	fGraph->SetMarkerSize(.5);
+	fGraph->Draw("ap");
+}
+
+void Waveform::DeleteGraph() {
+	delete fGraph;
+}
+
+void Waveform::SetSamplingRate(Double_t samplingRate) {
+	fSamplingRate = samplingRate;
+}
+
+void Waveform::SetIntegRange(Double_t integRange) {
+	fIntegRange = integRange;
+}
+
+void Waveform::SetTrueGain(Double_t trueGain) {
+	fTrueGain = trueGain;
+}
+
+void Waveform::SetTauTiming(Double_t tauTiming) {
+   fTauTiming = tauTiming;
 }
 
 void Waveform::SetNoises(Double_t lambda, Double_t alpha,
@@ -173,10 +205,6 @@ void Waveform::SetNoises(Double_t lambda, Double_t alpha,
    fAlphaCT = alphaCT;
    fDCR = dcr;
    fNoise = noise;
-}
-
-void Waveform::SetTauTiming(Double_t tauTiming) {
-   fTauTiming = tauTiming;
 }
 
 Double_t Waveform::GetCharge() {

@@ -1,11 +1,16 @@
 //--/----|----/----|----/----|----/----|----/----|----/----|----/----|----/----|
 #include "Waveform_LED.cpp"
 
-void WFCalib_ov() {
+void WFCalib_ov_linear() {
 	const Int_t N = 256;
 	Double_t canvX = 1150., canvY = 650;
 	
 	TRandom3 rndm(0);
+
+	Double_t samplingRate = 16;
+	Double_t integRange = 1500;
+
+	Double_t tauTiming = 1000;
 
 	Double_t lambda = 0;
 	Double_t alpha = 0;
@@ -14,14 +19,16 @@ void WFCalib_ov() {
 	Double_t noise = 0;
 
 	Int_t nEvent = 100;
-	Int_t nPhoton = 50;
+	Int_t nPhoton = 5;
 	Int_t nOV = 8;
-	Int_t nPar = 4;
+	Int_t nPar = 2;
 
 	TCanvas *canvDiffVar = new TCanvas("canvDiffVar", "DiffVar", canvX, canvY);
 	canvDiffVar->Divide(3,3);
+	TCanvas *canvMonitor = new TCanvas("canvMonitor", "Monitor", canvX, canvY);
+	canvMonitor->Divide(4,4);
 
-	TClonesArray *caPar = new TClonesArray("TGraphErrors", 4);
+	TClonesArray *caPar = new TClonesArray("TGraphErrors", nPar);
 	for(Int_t iPar=0; iPar<nPar; iPar++) {
 		new ((TGraphErrors*)(*caPar)[iPar]) TGraphErrors;
 	}
@@ -35,7 +42,11 @@ void WFCalib_ov() {
 		for(Int_t iPhoton=0; iPhoton<nPhoton; iPhoton++) {
 			for(int iEvent=0; iEvent<nEvent; iEvent++){
 				Waveform* wf = new Waveform;
+				wf->SetSamplingRate(samplingRate);
+				wf->SetIntegRange(integRange);
+				wf->SetTauTiming(tauTiming);
 				wf->SetTrueGain(trueGain);
+
 				wf->MakeTemplate();
 				wf->SetNoises(lambda, alpha, alphaCT, dcr, noise);
 				wf->MakeEvent(iPhoton);
@@ -44,9 +55,18 @@ void WFCalib_ov() {
 					continue;
 				}
 				pnt++;
+				if(iOV==0 && iEvent==0) {
+					canvMonitor->cd(2*iPhoton+1);
+					wf->MakeGraph();
+				}
+
 				wf->Differentiate(2);
 				Double_t diffVar = wf->GetVariance();
 				grDiffVar->SetPoint(pnt, charge, diffVar);
+				if(iOV==0 && iEvent==0) {
+					canvMonitor->cd(2*iPhoton+2);
+					wf->MakeGraph();
+				}
 				delete wf;
 				pnt++;
 			}
@@ -61,29 +81,21 @@ void WFCalib_ov() {
 		canvDiffVar->cd(iOV+1);
 		grDiffVar->Draw("ap");
 		
-		TF1* funcQuad = new TF1("funcQuad", "pol2");
-		funcQuad->SetLineColor(kRed);
-		grDiffVar->Fit(funcQuad, "Q");
+		TF1* funcLinear = new TF1("funcLinear", "pol1");
+		funcLinear->SetLineColor(kRed);
+		grDiffVar->Fit(funcLinear, "Q");
 		
 		Double_t parDiffVar[3];
 		Double_t errDiffVar[3];
-		for (int iPar = 0; iPar < 3; iPar++) {
-			parDiffVar[iPar]=funcQuad->GetParameter(iPar);
-			errDiffVar[iPar]=funcQuad->GetParError(iPar);
+		for (int iPar = 0; iPar < nPar; iPar++) {
+			parDiffVar[iPar]=funcLinear->GetParameter(iPar);
+			errDiffVar[iPar]=funcLinear->GetParError(iPar);
 
 			((TGraphErrors*)(*caPar)[iPar])->
 			 SetPoint(iOV, trueGain, parDiffVar[iPar]);
 			((TGraphErrors*)(*caPar)[iPar])->
 			 SetPointError(iOV, 0, errDiffVar[iPar]);
 		}
-		Double_t gainDiffVar = parDiffVar[1]/(1-parDiffVar[2]);
-		Double_t gainDiffVarErr = 
-			TMath::Sqrt(TMath::Power(errDiffVar[1]/(1-parDiffVar[2]), 2)
-							+ TMath::Power(parDiffVar[1]*errDiffVar[2]
-												/(1-parDiffVar[2])/(1-parDiffVar[2])
-												, 2));
-		((TGraphErrors*)(*caPar)[3])->SetPoint(iOV, trueGain, gainDiffVar);
-		((TGraphErrors*)(*caPar)[3])->SetPointError(iOV, 0, gainDiffVarErr);
 	}
 
 	TCanvas *canvPar = new TCanvas("canvPar", "Parameters", canvX, canvY);
@@ -91,11 +103,8 @@ void WFCalib_ov() {
 
 	((TGraphErrors*)(*caPar)[0])->SetTitle("C0;Gain;C0");
 	((TGraphErrors*)(*caPar)[1])->SetTitle("C1;Gain;C1");
-	((TGraphErrors*)(*caPar)[2])->SetTitle("C2;Gain;C2");
-	((TGraphErrors*)(*caPar)[3])->
-		SetTitle("Calculated Gain;Gain;Calculated Gain");
 
-	for(Int_t iPar=0; iPar<4; iPar++) {
+	for(Int_t iPar=0; iPar<nPar; iPar++) {
 		((TGraphErrors*)(*caPar)[iPar])->SetMarkerStyle(8);
 		((TGraphErrors*)(*caPar)[iPar])->SetMarkerSize(.5);
 		canvPar->cd(iPar+1);

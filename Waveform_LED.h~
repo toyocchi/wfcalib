@@ -5,7 +5,7 @@
 class Waveform{
 protected:
    Double_t fSamplingRate = 1.6; // GHz
-   Double_t fIntegRange = 200;
+   Double_t fIntegRange = 150;
    Double_t fAnalysisStart = 0;
    Double_t fAnalysisEnd;
    Int_t    fNPnt;

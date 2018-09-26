@@ -51,7 +51,6 @@ Int_t Waveform::MakeEvent(Int_t nPhoton) {
       } else {
          pulseTime = fFuncTiming->GetRandom();
       }
-
       pulseTime += fTriggerTime;
 
       if(pulseTime < fAnalysisEnd) {
